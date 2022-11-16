@@ -1,0 +1,52 @@
+﻿@model IEnumerable<Player>
+@{
+	Layout=null;
+}
+<form asp-controller="player" asp-action="Index" method="post" enctype="multipart/form-data">
+	<input type="file" name="file"/>
+	<hr />
+	<button type="submit">Upload</button>
+</form> 
+  @if(Model.Count() >0)
+{
+	<hr/>
+	<table cellpadding="0" cellspacing="0" border="1">
+		<tr>
+			<th>id</th>
+			<td>first_name</td>
+			<td>height_feet</td>
+			<td>height_inches</td>
+			<td>position</td>
+			<td>team</td>
+			<td>weight_pounds</td>
+			<td>Team_Id</td>
+			<td>Team_abbreviation</td>
+			<td>Team_city</td>
+			<td>Team_conference</td>
+			<td>Team_division</td>
+			<td>Team_full_name</td>
+			<td>Team_name</td>
+		</tr>
+		@foreach (Player p in Model)
+		{
+			<tr>
+				<td>@p.id</td>
+				<td>@p.first_name</td>
+				<td>@p.height_feet</td>
+				<td>@p.height_inches</td>
+				<td>@p.position</td>
+				<td>@p.team</td>
+				<td>@p.weight_pounds</td>
+				
+				<td>@p.team.team_id</td>
+				<td>@p.team.team_abbreviation</td>
+				<td>@p.team.team_city</td>
+				<td>@p.team.team_conference</td>
+				<td>@p.team.team_division</td>
+				<td>@p.team.team_full_name</td>
+				<td>@p.team.team_name</td>
+			</tr>
+
+		}
+	</table>
+}
