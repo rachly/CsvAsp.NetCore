@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using System.Configuration;
+  using Microsoft.EntityFrameworkCore;
+using System.Data;
 using WebApplication1.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,8 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddDbContext<AppDBContext>(option =>
-{
-    option.UseSqlite("Name=DefaultConnection");
+{    
+    option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddSession(options =>
 {

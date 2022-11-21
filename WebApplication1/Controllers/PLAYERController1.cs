@@ -2,13 +2,14 @@
 using CsvHelper;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
-
-
 using System;
 using WebApplication1.Models;
 using Newtonsoft.Json;
-using System.Linq;
+
 using Newtonsoft.Json.Linq;
+using WebApplication1.Data;
+//using LinqToDB;
+using Microsoft.EntityFrameworkCore;
 
 namespace WebApplication1.Controllers
 {
@@ -16,26 +17,18 @@ namespace WebApplication1.Controllers
 	{
 		private Timer _timer = null;
 		private bool bInttilaze = false;
-
+		private readonly AppDBContext _context;
 		private Microsoft.AspNetCore.Hosting.IHostingEnvironment _hostingEnvironment;
-		public PlayerController(Microsoft.AspNetCore.Hosting.IHostingEnvironment hostingEnvironment)
+		public PlayerController(Microsoft.AspNetCore.Hosting.IHostingEnvironment hostingEnvironment, AppDBContext context)
 		{
 			_hostingEnvironment = hostingEnvironment;
+			_context = context;
 		}
 
-		//[HttpGet]
-		//[Route("[controller]/[action]")]
-		//public IActionResult Test()
-		//{
-		//	var root = $"{_hostingEnvironment.WebRootPath}";
-		//	return Ok();
-		//}
 		public IActionResult Index(List<Player> players)
 		{
 
 			players = players == null ? new List<Player>() : players;
-
-
 
 			return View(players);
 		}
@@ -53,16 +46,16 @@ namespace WebApplication1.Controllers
 
 			#endregion
 			var player = this.GetPlayerList(file.FileName);
-			
-			//HttpContext.Session.SetString("SessionPlayers", JsonConvert.SerializeObject(player));
+
+
 			every15Minte(file.FileName);
 			return Index(player);
 		}
 
-            bool b=false;
+		bool b = false;
 		private List<Player> GetPlayerList(string fileName)
 		{
-			
+
 			List<Player> players = new List<Player>();
 
 			#region Read CSV
@@ -76,95 +69,125 @@ namespace WebApplication1.Controllers
 				{
 					var player = csv.GetRecord<Player>();
 
-					players.Add(player);
-                   
+					players.Add(player); 
+					
+
 				}
-				
+                 
 			}
 
-    //        if (b == false)
-    //        {
-    //          HttpContext.Session.SetString("SessionPlayers", JsonConvert.SerializeObject(players));
-				//b=true;
-    //        }
+            if (b == false)
+            {
+				inserDB(players);
 
-			#endregion
-			#region Create  CSV 
-			path = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\FilesTo"}";
+			}
+
+            #endregion
+            #region Create  CSV 
+            path = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\FilesTo"}";
 			using (var write = new StreamWriter(path + "\\NewFile.csv"))
 			using (var csv = new CsvWriter(write, CultureInfo.InvariantCulture))
 			{
 				csv.WriteRecords(players);
 			}
 
-			
+
 			#endregion
 			return players;
 
 		}
 
+		public IActionResult inserDB(List<Player> p)
+        {
+			var list = _context.AppUsers.Include(x => x.team).ToList();
+			if (list.Count == 0)
+          {
+              for (int i = 0; i < p.Count; i++)
+            {
+				b=true;
+                _context.AppUsers.Add(p[i]);
+
+				_context.SaveChanges();
+			}
+		
+         
+            }
+			   return Ok(p);
+			
+        }
 
 
-	
 		public async void every15Minte(string file)
 		{
-			var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
-		
-			 var path = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\files"}" + "\\" + file;
-
-			var players = GetPlayerList(file);
-			
-            
-          // HttpContext.Session.Clear();
-           
-
-			//players[0].height_feet = "789";
-		 	  
-			   
-		 	var list = JsonConvert.DeserializeObject<List<Player>>(HttpContext.Session.GetString("SessionPlayers"));
-			
-			var b=false;
-            for (int i = 0; i < players.Count; i++)
-            {
-          Dictionary<string,string> v= list[i].updatebyFile(players[i]);
-                if (v.Count > 0)
-                {
-					HttpContext.Session.Clear();
-					HttpContext.Session.SetString("SessionPlayers", JsonConvert.SerializeObject(list));
-				}
-				Console.WriteLine(v);
-			}
-            if (b == true)
-            {
-			//	HttpContext.Session.SetString("SessionPlayers", JsonConvert.SerializeObject(list));
-				Console.WriteLine("הנתונים עודכנו בהצלחה");
-            }
-			Console.WriteLine(b);
-		
-
 			//while (await timer.WaitForNextTickAsync())
 			//{
 
+			//get from db
 
-			//	Console.WriteLine(players);
-			//	Console.WriteLine(list);
+			var list = _context.AppUsers.Include(x => x.team).ToList();			    
+			
+		
+			var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
 
-			//	count++;
-			//	Console.WriteLine(DateTime.Now);
-			//	if (count > 10)
-			//	{
-			//		timer.Dispose();
-			//	}
-			//}
+			var path = $"{Directory.GetCurrentDirectory()}{@"\wwwroot\files"}" + "\\" + file;
+			//get read csv
+			var players = GetPlayerList(file);
+			
+
+			//timer !
+			// cheak if is change 
+			var b = false;
+
+			for (int i = players.Count; i >=0; i--)
+			{
+			bool v = list[i].updatebyFile(players[i]);
+
+
+				            if (v ==true)
+			               {
+				 	     var index = list[i];
+					    //query update this index
+				    	 var myplayer = _context.AppUsers.First(g => g.id == players[i].id);
+				             myplayer.id=list[i].id;
+					         myplayer.first_name = list[i].first_name;
+					         myplayer.last_name = list[i].last_name;
+					         myplayer.position = list[i].position;
+					         myplayer.height_feet = list[i].height_feet;
+					         myplayer.height_inches = list[i].height_inches;
+					         myplayer.weight_pounds = list[i].weight_pounds;
+					         myplayer.team = list[i].team;
+
+					         _context.SaveChanges();
+               
+				       }
+
+					Console.WriteLine(v);
+		      	}
+
+				if (b == true)
+				{
+					//	HttpContext.Session.SetString("SessionPlayers", JsonConvert.SerializeObject(list));
+					Console.WriteLine("הנתונים עודכנו בהצלחה");
+				}
+				Console.WriteLine(b);
+
+
+				
+
+
+				//}
 
 
 
+
+
+
+
+			}
 
 
 
 
 		}
-
-	
 	}
-}
+
